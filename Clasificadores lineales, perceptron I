@@ -1,0 +1,154 @@
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Representa un patrón de entrenamiento individual para la compuerta lógica.
+ */
+class Patron {
+    private final double[] entradas;
+    private final int salidaEsperada;
+
+    public Patron(double[] entradas, int salidaEsperada) {
+        this.entradas = entradas;
+        this.salidaEsperada = salidaEsperada;
+    }
+
+    public double[] getEntradas() {
+        return entradas;
+    }
+
+    public int getSalidaEsperada() {
+        return salidaEsperada;
+    }
+}
+
+/**
+ * Implementación del Perceptrón Monocapa sin velocidad de aprendizaje.
+ */
+class Perceptron {
+    private final double[] pesos;
+    private double sesgo;
+
+    public Perceptron(double[] pesosIniciales, double sesgoInicial) {
+        this.pesos = pesosIniciales.clone();
+        this.sesgo = sesgoInicial;
+    }
+
+    // Calcula z = w1*x1 + w2*x2 + b
+    public double calcularSumaPonderada(double[] entradas) {
+        double suma = 0.0;
+        for (int i = 0; i < entradas.length; i++) {
+            suma += pesos[i] * entradas[i];
+        }
+        return suma + sesgo;
+    }
+
+    // Función de activación Escalón de Heaviside
+    public int funcionActivacion(double sumaPonderada) {
+        return sumaPonderada >= 0.0 ? 1 : 0;
+    }
+
+    // Realiza la predicción y_hat = f(z)
+    public int predecir(double[] entradas) {
+        double sumaPonderada = calcularSumaPonderada(entradas);
+        return funcionActivacion(sumaPonderada);
+    }
+
+    // Entrenamiento sin parámetro eta (actualización directa por el error)
+    public void entrenar(List<Patron> conjuntoEntrenamiento, int maxEpocas) {
+        int epoca = 0;
+        boolean convergente = false;
+
+        while (epoca < maxEpocas && !convergente) {
+            int erroresEnEpoca = 0;
+
+            for (Patron patron : conjuntoEntrenamiento) {
+                double[] x = patron.getEntradas();
+                int yEsperada = patron.getSalidaEsperada();
+
+                int yCalculada = predecir(x);
+                int error = yEsperada - yCalculada;
+
+                if (error != 0) {
+                    // Actualización sin tasa de aprendizaje: w_i = w_i + (y - y_hat) * x_i
+                    for (int i = 0; i < pesos.length; i++) {
+                        pesos[i] += error * x[i];
+                    }
+                    // Actualización del bias: b = b + (y - y_hat)
+                    sesgo += error;
+                    erroresEnEpoca++;
+                }
+            }
+
+            if (erroresEnEpoca == 0) {
+                convergente = true;
+            }
+            epoca++;
+        }
+    }
+
+    public double[] getPesos() {
+        return pesos;
+    }
+
+    public double getSesgo() {
+        return sesgo;
+    }
+}
+
+public class PerceptronAND {
+    public static void main(String[] args) {
+        // 1. Definición de la Tabla de Verdad de la Compuerta Lógica AND
+        List<Patron> entrenamiento = new ArrayList<>();
+        entrenamiento.add(new Patron(new double[]{0.0, 0.0}, 0));
+        entrenamiento.add(new Patron(new double[]{0.0, 1.0}, 0));
+        entrenamiento.add(new Patron(new double[]{1.0, 0.0}, 0));
+        entrenamiento.add(new Patron(new double[]{1.0, 1.0}, 1));
+
+        // 2. Inicialización de pesos y bias desde el código fuente
+        double[] pesosIniciales = {0.0, 0.0};
+        double sesgoInicial = 0.0;
+
+        Perceptron perceptron = new Perceptron(pesosIniciales, sesgoInicial);
+
+        // 3. Proceso de entrenamiento iterativo
+        perceptron.entrenar(entrenamiento, 100);
+
+        // 4. Obtención de parámetros optimizados
+        double[] pesosOptimos = perceptron.getPesos();
+        double sesgoOptimo = perceptron.getSesgo();
+
+        // 5. Impresión de resultados en la terminal
+        System.out.println("=================================================");
+        System.out.println("  ENTRENAMIENTO DEL PERCEPTRÓN - COMPUERTA AND   ");
+        System.out.println("      (Sin velocidad de aprendizaje eta)         ");
+        System.out.println("=================================================");
+        System.out.printf("Peso óptimo w1  : %.4f%n", pesosOptimos[0]);
+        System.out.printf("Peso óptimo w2  : %.4f%n", pesosOptimos[1]);
+        System.out.printf("Bias óptimo (b) : %.4f%n", sesgoOptimo);
+        System.out.println("-------------------------------------------------");
+        System.out.println("COMPROBACIÓN PASO A PASO POR PATRÓN:");
+        System.out.println("-------------------------------------------------");
+
+        for (int i = 0; i < entrenamiento.size(); i++) {
+            Patron p = entrenamiento.get(i);
+            double[] x = p.getEntradas();
+            int yEsperada = p.getSalidaEsperada();
+
+            // Cálculo paso a paso de la Suma Ponderada z
+            double z = perceptron.calcularSumaPonderada(x);
+
+            // Evaluación paso a paso de la Función de Activación f(z)
+            int yCalculada = perceptron.funcionActivacion(z);
+
+            System.out.printf("Patrón %d: [x1 = %.0f, x2 = %.0f] | Salida Objetivo (Y): %d%n",
+                    (i + 1), x[0], x[1], yEsperada);
+            System.out.printf("  a) Suma Ponderada z = (%.4f * %.0f) + (%.4f * %.0f) + (%.4f) = %.4f%n",
+                    pesosOptimos[0], x[0], pesosOptimos[1], x[1], sesgoOptimo, z);
+            System.out.printf("  b) Función de Activación f(z) = f(%.4f) = %d%n", z, yCalculada);
+            System.out.printf("  c) Estado: %s%n",
+                    (yCalculada == yEsperada ? "CORRECTO (Convergencia comprobada)" : "INCORRECTO"));
+            System.out.println("-------------------------------------------------");
+        }
+    }
+}
